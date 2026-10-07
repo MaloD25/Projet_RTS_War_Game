@@ -7,39 +7,34 @@ using BehaviorDesigner.Runtime.Tasks;
 
 public class TurretSeekTarget : Action
 {
-	public SharedTransform target;
-	Turret turret;
+    public SharedTransform target;
 
-	bool hasRotated;
+    Turret turret;
 
-	public override void OnAwake()
-	{
-		turret = GetComponent<Turret>();
-	}
+    bool hasRotated;
+
+    public override void OnAwake()
+    {
+        turret = GetComponent<Turret>();
+    }
 
     public override void OnStart()
     {
         hasRotated = false;
 
-        if (target.Value != null)
-        {
-            turret.RotateTowards(
-                target.Value.position,
-                () => hasRotated = true
-            );
-        }
+        turret.RotateTowards(
+            target.Value.position,
+            () => hasRotated = true
+        );
     }
 
     public override TaskStatus OnUpdate()
     {
-        if (target.Value == null)
+        if (!target.Value)
             return TaskStatus.Failure;
 
-        if (hasRotated)
-            return TaskStatus.Success;
-
-        return TaskStatus.Running;
+        return hasRotated
+            ? TaskStatus.Success
+            : TaskStatus.Running;
     }
-
-
 }

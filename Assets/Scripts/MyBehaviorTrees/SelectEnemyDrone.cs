@@ -7,75 +7,47 @@ using BehaviorDesigner.Runtime.Tasks;
 
 public class SelectEnemyDrone : Action
 {
-	IArmyElement m_ArmyElement;
-	public SharedTransform target;
-	public SharedFloat minRadius;
-	public SharedFloat maxRadius;
-	/* Vector3 m_Position;
-	public Vector3 Position
-	{ get { return m_Position; } set { m_Position = value; }
-	}*/
+    IArmyElement m_ArmyElement;
 
-	public override void OnAwake()
-	{
-		m_ArmyElement =(IArmyElement) GetComponent(typeof(IArmyElement));
-	}
+    public SharedTransform target;
+    public SharedFloat minRadius;
+    public SharedFloat maxRadius;
+
+    /*
+    Vector3 m_Position;
+
+    public Vector3 Position
+    {
+        get { return m_Position; }
+        set { m_Position = value; }
+    }
+    */
+
+    public override void OnAwake()
+    {
+        m_ArmyElement =
+            (IArmyElement)GetComponent(
+                typeof(IArmyElement)
+            );
+    }
 
     public override TaskStatus OnUpdate()
     {
         if (m_ArmyElement.ArmyManager == null)
             return TaskStatus.Running;
 
-        GameObject enemy = null;
-
-        if (m_ArmyElement.ArmyManager is ArmyManagerRed redManager)
-        {
-            // Première possibilité :
-            // un drone vert est dangereusement proche.
-            enemy = redManager.GetEmergencyEnemyDrone(
+        target.Value =
+            m_ArmyElement.ArmyManager
+            .GetRandomEnemy<Drone>(
                 transform.position,
-                10f
-            );
+                minRadius.Value,
+                maxRadius.Value
+            )
+            ?.transform;
 
-            if (enemy != null)
-            {
-                target.Value = enemy.transform;
-                return TaskStatus.Success;
-            }
-
-            // S'il reste encore des tourelles vertes,
-            // on ne sélectionne PAS de drone.
-            if (redManager.HasEnemyOfType<Turret>())
-            {
-                return TaskStatus.Failure;
-            }
-
-            // Toutes les tourelles sont mortes :
-            // on peut maintenant attaquer les drones.
-            enemy =
-                redManager.GetRandomEnemy<Drone>(
-                    transform.position,
-                    minRadius.Value,
-                    maxRadius.Value
-                );
-        }
+        if (target.Value != null)
+            return TaskStatus.Success;
         else
-        {
-            // Armée verte : comportement original
-            enemy =
-                m_ArmyElement.ArmyManager
-                    .GetRandomEnemy<Drone>(
-                        transform.position,
-                        minRadius.Value,
-                        maxRadius.Value
-                    );
-        }
-
-        if (enemy == null)
             return TaskStatus.Failure;
-
-        target.Value = enemy.transform;
-
-        return TaskStatus.Success;
     }
 }

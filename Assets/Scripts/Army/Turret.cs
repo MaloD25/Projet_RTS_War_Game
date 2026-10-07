@@ -6,106 +6,192 @@ using System;
 
 public class Turret : ArmyElement
 {
-	public Transform m_TurretHead;
+    public Transform m_TurretHead;
 
-	public float m_RotationSpeed;
+    public float m_RotationSpeed;
 
-	[SerializeField] float m_RocketTravelDuration;
+    [SerializeField]
+    float m_RocketTravelDuration;
 
-	public GameObject m_RocketPrefab;
+    public GameObject m_RocketPrefab;
 
-	public Transform[] m_SpawnPoints ;
+    public Transform[] m_SpawnPoints;
 
-	int m_CurrSpawnIndex = 0;
+    int m_CurrSpawnIndex = 0;
 
-	Transform NextSpawnPoint { get { return m_SpawnPoints[(m_CurrSpawnIndex++) % m_SpawnPoints.Length]; } }
-
-	IEnumerator m_RotationCoroutine = null;
-    private Vector3 m_AimPoint;
-    private bool m_HasAimPoint = false;
-
-    public void SetAimPoint(Vector3 position)
+    Transform NextSpawnPoint
     {
-        m_AimPoint = position;
-        m_HasAimPoint = true;
+        get
+        {
+            return m_SpawnPoints[
+                (m_CurrSpawnIndex++)
+                % m_SpawnPoints.Length
+            ];
+        }
     }
 
-    public bool TryGetAimPoint(out Vector3 position)
+    IEnumerator m_RotationCoroutine = null;
+
+    IEnumerator Start()
     {
-        position = m_AimPoint;
-        return m_HasAimPoint;
+        yield break;
     }
 
-    public void ClearAimPoint()
+    public void Shoot(Vector3 targetPos)
     {
-        m_HasAimPoint = false;
+        Transform spawnPos =
+            m_SpawnPoints[
+                m_CurrSpawnIndex
+                % m_SpawnPoints.Length
+            ];
+
+        GameObject newRocketGO =
+            Instantiate(
+                m_RocketPrefab,
+                spawnPos.position,
+                Quaternion.LookRotation(
+                    spawnPos.forward
+                )
+            );
+
+        Rocket rocket =
+            newRocketGO
+            .GetComponent<Rocket>();
+
+        rocket.Shoot(
+            targetPos,
+            m_RocketTravelDuration
+        );
+
+        newRocketGO.tag =
+            gameObject.tag;
     }
 
-    // Use this for initialization
-    IEnumerator Start () {
-		yield break;
-	}
+    public void RotateTowards(
+        Vector3 targetPos,
+        Action onRotationOver = null)
+    {
+        Transform spawnPoint =
+            NextSpawnPoint;
 
-	public void Shoot(Vector3 targetPos)
-	{
-		Transform spawnPos = m_SpawnPoints[m_CurrSpawnIndex % m_SpawnPoints.Length];
-		GameObject newRocketGO = Instantiate(m_RocketPrefab, spawnPos.position, Quaternion.LookRotation(spawnPos.forward));
-		Rocket rocket = newRocketGO.GetComponent<Rocket>();
-		rocket.Shoot(targetPos, m_RocketTravelDuration);
-		newRocketGO.tag = gameObject.tag;
-	}
+        Vector3 startVelocity =
+            (
+                targetPos
+                - spawnPoint.position
+                - .5f
+                * Physics.gravity
+                * m_RocketTravelDuration
+                * m_RocketTravelDuration
+            )
+            / m_RocketTravelDuration;
 
-	public void RotateTowards(Vector3 targetPos,Action onRotationOver=null )
-	{
-		Transform spawnPoint = NextSpawnPoint;
-		Vector3 startVelocity = (targetPos - spawnPoint.position - .5f * Physics.gravity * m_RocketTravelDuration * m_RocketTravelDuration) / m_RocketTravelDuration;
+        if (m_RotationCoroutine != null)
+        {
+            StopCoroutine(
+                m_RotationCoroutine
+            );
 
-		if (m_RotationCoroutine != null)
-		{
-			StopCoroutine(m_RotationCoroutine);
-			m_RotationCoroutine = null;
-		}
+            m_RotationCoroutine = null;
+        }
 
-		m_RotationCoroutine = RotateCoroutine(m_TurretHead.rotation, Quaternion.LookRotation(startVelocity.normalized), m_RotationSpeed, onRotationOver);
+        m_RotationCoroutine =
+            RotateCoroutine(
+                m_TurretHead.rotation,
+                Quaternion.LookRotation(
+                    startVelocity.normalized
+                ),
+                m_RotationSpeed,
+                onRotationOver
+            );
 
-		StartCoroutine(m_RotationCoroutine);
+        StartCoroutine(
+            m_RotationCoroutine
+        );
+    }
 
-	}
+    IEnumerator RotateCoroutine(
+        Quaternion startOrient,
+        Quaternion endOrient,
+        float rotationSpeed,
+        Action onRotationOver = null)
+    {
+        float duration =
+            Quaternion.Angle(
+                startOrient,
+                endOrient
+            )
+            / rotationSpeed;
 
-	IEnumerator RotateCoroutine(Quaternion startOrient, Quaternion endOrient, float rotationSpeed, Action onRotationOver = null)
-	{
-		float duration = Quaternion.Angle(startOrient, endOrient) / rotationSpeed;
-		float elapsedTime = 0;
-		while (elapsedTime < duration)
-		{
-			float k = elapsedTime / duration;
-			m_TurretHead.rotation = Quaternion.Slerp(startOrient, endOrient, k);
-			elapsedTime += Time.deltaTime;
-			yield return null;
-		}
-		m_TurretHead.rotation = endOrient;
-		if (onRotationOver != null) onRotationOver();
-	}
+        float elapsedTime = 0;
 
+        while (elapsedTime < duration)
+        {
+            float k =
+                elapsedTime / duration;
+
+            m_TurretHead.rotation =
+                Quaternion.Slerp(
+                    startOrient,
+                    endOrient,
+                    k
+                );
+
+            elapsedTime +=
+                Time.deltaTime;
+
+            yield return null;
+        }
+
+        m_TurretHead.rotation =
+            endOrient;
+
+        if (onRotationOver != null)
+            onRotationOver();
+    }
 }
 
 
+/*
+while (true)
+{
+    var enemys =
+        GameObject.FindObjectsOfType<ArmyElement>()
+        .Where(
+            element =>
+                !element.gameObject.CompareTag(
+                    gameObject.tag
+                )
+        )
+        .ToList();
 
+    enemys.Sort(
+        (a,b) =>
+            Random.value > .5f ? 1 : -1
+    );
 
-/*		while (true)
-		{
-			var enemys = GameObject.FindObjectsOfType<ArmyElement>().Where(element => !element.gameObject.CompareTag(gameObject.tag)).ToList();
-			enemys.Sort((a,b)=>Random.value>.5f?1:-1);
+    if (enemys.Count > 0)
+    {
+        Vector3 posOnTerrain =
+            Vector3.zero;
 
-			if (enemys.Count > 0)
-			{
-				Vector3 posOnTerrain = Vector3.zero;
-				Vector3 normalOnTerrain = Vector3.zero;
-				if (TerrainManager.Instance.GetVerticallyAlignedPositionOnTerrain(enemys[0].transform.position, ref posOnTerrain, ref normalOnTerrain))
-				{
-					SeekAndShoot(posOnTerrain);
-				}
-			}
-			yield return new WaitForSeconds(2+Random.value);
-		}
-		*/
+        Vector3 normalOnTerrain =
+            Vector3.zero;
+
+        if (
+            TerrainManager.Instance
+            .GetVerticallyAlignedPositionOnTerrain(
+                enemys[0].transform.position,
+                ref posOnTerrain,
+                ref normalOnTerrain
+            )
+        )
+        {
+            SeekAndShoot(posOnTerrain);
+        }
+    }
+
+    yield return new WaitForSeconds(
+        2 + Random.value
+    );
+}
+*/
