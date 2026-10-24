@@ -25,6 +25,10 @@ namespace BehaviorDesigner.Runtime.Tasks.Movement
             if (!target.Value) return TaskStatus.Failure;
 
             Vector3 dir = Vector3.ProjectOnPlane(target.Value.position - transform.position, Vector3.up).normalized;
+
+            if (dir.sqrMagnitude < 0.0001f)
+                return TaskStatus.Success;
+
             qEndOrient = Quaternion.LookRotation(dir);
 
             Debug.DrawLine(transform.position, transform.position+dir*2, Color.red);
