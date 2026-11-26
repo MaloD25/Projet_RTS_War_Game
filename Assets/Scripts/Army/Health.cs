@@ -10,8 +10,8 @@ public class Health : MonoBehaviour
 	[SerializeField] float m_StartHealth;
 	float m_Health;
 	public float Value => m_Health;
-
-	[SerializeField] Slider m_HealthBar;
+    public float MaxValue => m_StartHealth;
+    [SerializeField] Slider m_HealthBar;
 
 	[SerializeField] UnityEvent m_OnDieEvent;
 
@@ -25,8 +25,19 @@ public class Health : MonoBehaviour
 	{
 		m_HealthBar.value = m_Health / m_StartHealth;
 	}
+    public void Heal(float amount)
+    {
+        if (amount <= 0f || m_Health <= 0f)
+            return;
 
-	public void InflictDamage(float damage)
+        m_Health = Mathf.Min(
+            m_Health + amount,
+            m_StartHealth
+        );
+
+        RefreshHealthDisplay();
+    }
+    public void InflictDamage(float damage)
 	{
 		m_Health = Mathf.Max(m_Health - damage, 0);
 		RefreshHealthDisplay();
